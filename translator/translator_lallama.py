@@ -50,59 +50,54 @@ class TranslatorLallama(TranslatorBase):
             verbose=verbose,
         )
 
+        self.supported_source_lang = "en"
+        self.supported_target_langs = {"es": {"es": None}}
+
         self.logger.info(f"Cuda is avaliable: {torch.cuda.is_available()}")
         if torch.cuda.is_available():
             self.logger.info(f"Number of avaliable GPUs: {torch.cuda.device_count()}")
 
         with Timer(f"LaLlama model initialization", self.logger):
             self.tokenizer = AutoTokenizer.from_pretrained(lallama_model)
-            self.model = AutoModelForCausalLM.from_pretrained(lallama_model)
-
-        self.supported_source_lang = langcodes.Language.get(self.tokenizer.source_lang)
-        self.supported_target_langs = {
-            langcodes.Language.get(lang): lang
-            for lang in self.tokenizer.target_lang.split("+")
-        }
-
-        self.multilingual = len(self.supported_target_langs) > 1
-
-        self.model.eval()
-        if device:
-            self.model.to(device)
-        elif torch.cuda.is_available():
-            self.model.to("cuda")
-
-        self.logger.info(f"LaLlama translator model is using {self.model.device}")
-        self.logger.info(f"Supported source language: {self.supported_source_lang}")
-        self.logger.info(
-            f"Supported target languages: {[str(lang) for lang in self.supported_target_langs.keys()]}"
-        )
-
-    def _translate_lines(self, lines):
-        if self.multilingual:
-            # For multilingual Marian we need to add target language to each line
-            # https://huggingface.co/transformers/v2.9.1/model_doc/marian.html
-            lines = [
-                f"### System:\nTraduce este texto al español\n\n### User:\n{line}\n\n### Response:\n"
-                for line in lines
-            ]
-
-        encoded = self.tokenizer(
-            lines, return_tensors="pt", padding=True, truncation=False
-        )
-
-        if encoded["input_ids"].shape[1] >= self.model.config.max_length:
-            raise Exception(
-                f"Input length ({encoded['input_ids'].shape[1]} tokens) is greater "
-                f"than model maximum length ({self.model.config.max_length} tokens), "
-                f"consider using sentence separation before translation."
+            self.model = AutoModelForCausalLM.from_pretrained(
+                lallama_model, load_in_8bit=True
             )
 
-        encoded.to(self.model.device)
-        generated_tokens = self.model.generate(**encoded, num_beams=self.beam_size)
-        result = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+        self.logger.info(f"LaLlama translator model is using {self.model.device}")
 
-        return result
+    def _translate_lines(self, lines):
+        translated_lines = []
+        for line in lines:
+            # Add target language prefix for multilingual Marian
+            line_with_prefix = f"### System:\nTraduce este texto al espa_ol\n\n### User:\n{line}\n\n### Response:\n"
+
+            self.logger.info(line_with_prefix)
+
+            encoded = self.tokenizer(
+                line_with_prefix, return_tensors="pt", padding=False, truncation=False
+            )
+
+            if (
+                encoded["input_ids"].shape[1]
+                >= self.model.config.max_position_embeddings
+            ):
+                raise Exception(
+                    f"Input length ({encoded['input_ids'].shape[1]} tokens) is greater "
+                    f"than model maximum length ({self.model.config.max_length} tokens), "
+                    f"consider using sentence separation before translation."
+                )
+
+            encoded.to(self.model.device)
+            generated_tokens = self.model.generate(**encoded, max_new_tokens=400)
+            self.logger.info(generated_tokens)
+
+            # Since we're processing one line at a time, we use decode instead of batch_decode
+            translated_line = self.tokenizer.decode(
+                generated_tokens[0], skip_special_tokens=True
+            )
+            translated_lines.append(translated_line)
+
+        return translated_lines
 
     def _set_language_pair(self, source_language, target_language):
         # We don't need to specifically set source language for Marian.
