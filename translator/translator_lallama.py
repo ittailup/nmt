@@ -71,10 +71,17 @@ class TranslatorLallama(TranslatorBase):
             # Add target language prefix for multilingual Marian
             line_with_prefix = f"### System:\nTraduce este texto al espa_ol\n\n### User:\n{line}\n\n### Response:\n"
 
-            self.logger.info(line_with_prefix)
-
             self.tokenizer.pad_token_id = 0
             self.tokenizer.padding_side = "left"
+
+            input_total_tokens = len(
+                self.tokenizer(
+                    line_with_prefix,
+                    return_tensors="pt",
+                    padding=False,
+                    truncation=False,
+                )
+            )
 
             encoded = self.tokenizer(
                 line_with_prefix, return_tensors="pt", padding=False, truncation=False
@@ -92,13 +99,12 @@ class TranslatorLallama(TranslatorBase):
 
             generation_config = GenerationConfig(
                 **{
-                    "temperature": 0.95,
+                    "temperature": 1,
                     "top_p": 0.9,
                     "top_k": 50,
                     "num_beams": 1,
                     "use_cache": True,
-                    "repetition_penalty": 1.2,
-                    "max_new_tokens": 4096,
+                    "max_new_tokens": input_total_tokens * 1.5,
                     "do_sample": True,
                     "pad_token_id": 32000,
                     "bos_token_id": 1,
