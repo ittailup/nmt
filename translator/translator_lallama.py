@@ -102,7 +102,7 @@ class TranslatorLallama(TranslatorBase):
                 "pad_token_id": 32000,
                 "bos_token_id": 1,
                 "eos_token_id": 2,
-            )
+            })
 
             encoded.to(self.model.device)
             generated_tokens = self.model.generate(
