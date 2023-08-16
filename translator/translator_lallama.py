@@ -107,8 +107,8 @@ class TranslatorLallama(TranslatorBase):
                     "max_new_tokens": input_total_tokens * 1.5,
                     "do_sample": True,
                     "pad_token_id": 32000,
-                    "bos_token_id": 1,
-                    "eos_token_id": 2,
+                    "bos_token_id": "<s>",
+                    "eos_token_id": "</s>",
                 }
             )
 
