@@ -111,11 +111,14 @@ class TranslatorLallama(TranslatorBase):
                 **encoded, generation_config=generation_config
             )
             self.logger.info(generated_tokens)
+            # remove the input tokens
+            output_tokens = generated_tokens[:, len(input_ids[0]) :]
 
             # Since we're processing one line at a time, we use decode instead of batch_decode
             translated_line = self.tokenizer.decode(
-                generated_tokens[0], skip_special_tokens=True
+                output_tokens[0], skip_special_tokens=True
             )
+
             translated_lines.append(translated_line.split("Response:\n")[1].strip())
 
         return translated_lines
