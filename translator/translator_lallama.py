@@ -90,19 +90,21 @@ class TranslatorLallama(TranslatorBase):
                     f"consider using sentence separation before translation."
                 )
 
-            generation_config = GenerationConfig(**{
-                "temperature": 0.95,
-                "top_p": 0.9,
-                "top_k": 50,
-                "num_beams": 1,
-                "use_cache": True,
-                "repetition_penalty": 1.2,
-                "max_new_tokens": 4096,
-                "do_sample": True,
-                "pad_token_id": 32000,
-                "bos_token_id": 1,
-                "eos_token_id": 2,
-            })
+            generation_config = GenerationConfig(
+                **{
+                    "temperature": 0.95,
+                    "top_p": 0.9,
+                    "top_k": 50,
+                    "num_beams": 1,
+                    "use_cache": True,
+                    "repetition_penalty": 1.2,
+                    "max_new_tokens": 4096,
+                    "do_sample": True,
+                    "pad_token_id": 32000,
+                    "bos_token_id": 1,
+                    "eos_token_id": 2,
+                }
+            )
 
             encoded.to(self.model.device)
             generated_tokens = self.model.generate(
@@ -114,7 +116,7 @@ class TranslatorLallama(TranslatorBase):
             translated_line = self.tokenizer.decode(
                 generated_tokens[0], skip_special_tokens=True
             )
-            translated_lines.append(translated_line.split("Response:\n")[1].strip()])
+            translated_lines.append(translated_line.split("Response:\n")[1].strip())
 
         return translated_lines
 
