@@ -105,7 +105,9 @@ class TranslatorLallama(TranslatorBase):
             }
 
             encoded.to(self.model.device)
-            generated_tokens = self.model.generate(**encoded, generation_config)
+            generated_tokens = self.model.generate(
+                **encoded, generation_config=generation_config
+            )
             self.logger.info(generated_tokens)
 
             # Since we're processing one line at a time, we use decode instead of batch_decode
