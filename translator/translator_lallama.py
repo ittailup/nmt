@@ -119,7 +119,7 @@ class TranslatorLallama(TranslatorBase):
                 output_tokens[0], skip_special_tokens=True
             )
 
-            translated_lines.append(translated_line.split("Response:\n")[1].strip())
+            translated_lines.append(translated_line)
 
         return translated_lines
 
