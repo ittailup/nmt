@@ -73,6 +73,9 @@ class TranslatorLallama(TranslatorBase):
 
             self.logger.info(line_with_prefix)
 
+            self.tokenizer.pad_token_id = 0
+            self.tokenizer.padding_side = "left"
+
             encoded = self.tokenizer(
                 line_with_prefix, return_tensors="pt", padding=False, truncation=False
             )
@@ -87,15 +90,29 @@ class TranslatorLallama(TranslatorBase):
                     f"consider using sentence separation before translation."
                 )
 
+            generation_config = {
+                "temperature": 0.95,
+                "top_p": 0.9,
+                "top_k": 50,
+                "num_beams": 1,
+                "use_cache": True,
+                "repetition_penalty": 1.2,
+                "max_new_tokens": 4096,
+                "do_sample": True,
+                "pad_token_id": 32000,
+                "bos_token_id": 1,
+                "eos_token_id": 2,
+            }
+
             encoded.to(self.model.device)
-            generated_tokens = self.model.generate(**encoded, max_new_tokens=400)
+            generated_tokens = self.model.generate(**encoded, generation_config)
             self.logger.info(generated_tokens)
 
             # Since we're processing one line at a time, we use decode instead of batch_decode
             translated_line = self.tokenizer.decode(
                 generated_tokens[0], skip_special_tokens=True
             )
-            translated_lines.append(translated_line)
+            translated_lines.append(translated_line[82:])
 
         return translated_lines
 
